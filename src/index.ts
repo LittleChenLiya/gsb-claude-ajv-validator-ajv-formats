@@ -7,12 +7,20 @@ import {
   fullFormats,
 } from "./formats"
 import formatLimit from "./limit"
+import {FormatContractError, registerFormat, registerFormats} from "./contract"
 import type Ajv from "ajv"
 import type {Plugin, Format} from "ajv"
 import {_, Name} from "ajv/dist/compile/codegen"
 
 export {FormatMode, FormatName} from "./formats"
 export {LimitFormatError} from "./limit"
+export type {
+  AsyncFormatContract,
+  FormatContract,
+  FormatDataType,
+  RegisterFormatOptions,
+  SyncFormatContract,
+} from "./contract"
 export interface FormatOptions {
   mode?: FormatMode
   formats?: FormatName[]
@@ -23,6 +31,9 @@ export type FormatsPluginOptions = FormatName[] | FormatOptions
 
 export interface FormatsPlugin extends Plugin<FormatsPluginOptions> {
   get: (format: FormatName, mode?: FormatMode) => Format
+  registerFormat: typeof registerFormat
+  registerFormats: typeof registerFormats
+  FormatContractError: typeof FormatContractError
 }
 
 const fullName = new Name("fullFormats")
@@ -50,6 +61,10 @@ formatsPlugin.get = (name: FormatName, mode: FormatMode = "full"): Format => {
   if (!f) throw new Error(`Unknown format "${name}"`)
   return f
 }
+
+formatsPlugin.registerFormat = registerFormat
+formatsPlugin.registerFormats = registerFormats
+formatsPlugin.FormatContractError = FormatContractError
 
 function addFormats(ajv: Ajv, list: FormatName[], fs: DefinedFormats, exportName: Name): void {
   ajv.opts.code.formats ??= _`require("ajv-formats/dist/formats").${exportName}`

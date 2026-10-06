@@ -112,6 +112,39 @@ addFormats(ajv, {mode: "fast", formats: ["date", "time"], keywords: true})
 
 In `"fast"` mode the following formats are simplified: `"date"`, `"time"`, `"date-time"`, `"iso-time"`, `"iso-date-time"`, `"uri"`, `"uri-reference"`, `"email"`. For example, `"date"`, `"time"` and `"date-time"` do not validate ranges in `"fast"` mode, only string structure, and other formats have simplified regular expressions.
 
+## Explicit format contracts
+
+`registerFormat` / `registerFormats` (also available as `addFormats.registerFormat` / `addFormats.registerFormats`) add custom formats under an explicit execution contract: you declare the applicable data `type` (`"string"` or `"number"`) and whether `validate` is sync (`async: false`) or async (`async: true`). The declared contract is trusted and enforced - the user `validate` function is never called during registration or schema compilation to infer its type.
+
+```typescript
+import Ajv from "ajv"
+import addFormats from "ajv-formats"
+
+const ajv = new Ajv()
+addFormats(ajv) // built-in formats keep working by default
+
+// three formats, checked first and published atomically
+addFormats.registerFormats(ajv, {
+  slug: {type: "string", async: false, validate: (s) => /^[a-z0-9-]+$/.test(s)}, // sync string
+  even: {type: "number", async: false, validate: (n) => n % 2 === 0}, // sync number
+  "free-name": {type: "string", async: true, validate: async (s) => s !== "root"}, // async string
+})
+```
+
+Contract rules:
+
+- A sync contract must return `boolean`. A `Promise<boolean>` is always truthy, so it can never be a sync result: TypeScript rejects it at compile time, a native async function declared sync throws `FormatContractError` at registration, and a Promise returned at validation time throws `FormatContractError` instead of passing as truthy.
+- An async contract (`async: true`) must return `Promise<boolean>`; failures are reported with the standard Ajv `format` error (`keyword: "format"`, `params: {format}`) via the usual async validation flow (`$async: true` schemas).
+- Unknown `type` values are rejected; only `"string"` and `"number"` are applicable.
+- Re-registering an existing name (including built-in formats) fails unless explicitly authorized with `{override: true}`.
+- `registerFormats` is atomic: all contracts are checked before anything is published, so a bad contract or a name conflict leaves the Ajv instance untouched.
+
+Run the self-contained three-format example locally (builds `dist` first):
+
+```bash
+npm run example:contract
+```
+
 ## Tests
 
 ```bash

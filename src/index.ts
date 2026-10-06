@@ -7,12 +7,15 @@ import {
   fullFormats,
 } from "./formats"
 import formatLimit from "./limit"
+import {validateStrictDateTime, isStrictDateTime} from "./strictDateTime"
 import type Ajv from "ajv"
 import type {Plugin, Format} from "ajv"
 import {_, Name} from "ajv/dist/compile/codegen"
 
 export {FormatMode, FormatName} from "./formats"
 export {LimitFormatError} from "./limit"
+export {validateStrictDateTime, isStrictDateTime} from "./strictDateTime"
+export type {StrictDateTimeError, StrictDateTimeResult} from "./strictDateTime"
 export interface FormatOptions {
   mode?: FormatMode
   formats?: FormatName[]
@@ -23,6 +26,8 @@ export type FormatsPluginOptions = FormatName[] | FormatOptions
 
 export interface FormatsPlugin extends Plugin<FormatsPluginOptions> {
   get: (format: FormatName, mode?: FormatMode) => Format
+  validateStrictDateTime: typeof validateStrictDateTime
+  isStrictDateTime: typeof isStrictDateTime
 }
 
 const fullName = new Name("fullFormats")
@@ -50,6 +55,9 @@ formatsPlugin.get = (name: FormatName, mode: FormatMode = "full"): Format => {
   if (!f) throw new Error(`Unknown format "${name}"`)
   return f
 }
+
+formatsPlugin.validateStrictDateTime = validateStrictDateTime
+formatsPlugin.isStrictDateTime = isStrictDateTime
 
 function addFormats(ajv: Ajv, list: FormatName[], fs: DefinedFormats, exportName: Name): void {
   ajv.opts.code.formats ??= _`require("ajv-formats/dist/formats").${exportName}`

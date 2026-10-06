@@ -55,6 +55,21 @@ See regular expressions used for format validation and the sources that were use
 
 **Please note**: JSON Schema draft-07 also defines formats `iri`, `iri-reference`, `idn-hostname` and `idn-email` for URLs, hostnames and emails with international characters. These formats are available in [ajv-formats-draft2019](https://github.com/luzlab/ajv-formats-draft2019) plugin.
 
+## Strict date-time profile
+
+In addition to the default `date-time` format (which is unchanged), the package exposes a strict date-time profile via `validateStrictDateTime` / `isStrictDateTime` (also available as properties of the plugin function and from `ajv-formats/dist/strictDateTime`).
+
+The strict profile only accepts the fixed Gregorian calendar form `YYYY-MM-DDTHH:MM:SS(.fraction)` with a mandatory zone (`Z` or a numeric offset `+HH:MM` / `-HH:MM`) and rejects leap seconds. It performs no input repair, and its result distinguishes a malformed string (`"syntax"`) from a syntactically valid but impossible calendar date (`"invalid-date"`) and from a missing zone (`"missing-zone"`).
+
+```javascript
+const {validateStrictDateTime} = require("ajv-formats/dist/strictDateTime")
+
+validateStrictDateTime("2020-02-29T23:59:59Z") // {valid: true}
+validateStrictDateTime("2021-02-30T00:00:00Z") // {valid: false, error: "invalid-date"}
+validateStrictDateTime("2021-06-30T12:00:00") // {valid: false, error: "missing-zone"}
+validateStrictDateTime("2016-12-31T23:59:60Z") // {valid: false, error: "leap-second"}
+```
+
 ## Keywords to compare values: `formatMaximum` / `formatMinimum` and `formatExclusiveMaximum` / `formatExclusiveMinimum`
 
 These keywords allow to define minimum/maximum constraints when the format keyword defines ordering (`compare` function in format definition).

@@ -112,6 +112,83 @@ addFormats(ajv, {mode: "fast", formats: ["date", "time"], keywords: true})
 
 In `"fast"` mode the following formats are simplified: `"date"`, `"time"`, `"date-time"`, `"iso-time"`, `"iso-date-time"`, `"uri"`, `"uri-reference"`, `"email"`. For example, `"date"`, `"time"` and `"date-time"` do not validate ranges in `"fast"` mode, only string structure, and other formats have simplified regular expressions.
 
+## Explicit format registration contract: `registerFormats`
+
+`registerFormats` registers user-defined formats under an explicit execution contract. Each format must declare up front whether it is `sync` or `async` and which data `type` it applies to - the contract is never inferred by running the user-supplied `validate` function (it is not called during registration or schema compilation).
+
+Contract rules:
+
+- `type` must be declared as `"string"` or `"number"` (the only types the Ajv `format` keyword supports); any unknown type is rejected.
+- `async` must be declared as `true` or `false`:
+  - `async: false` - `validate` is a synchronous function returning `boolean` (or a `RegExp` for string formats). Declaring `async: false` while the function returns a `Promise` is a configuration error (`FormatContractError`): a Promise is always truthy and must never be used as a sync validation result. Async functions are rejected at registration time; a sync function that returns a Promise at validation time throws instead of being silently treated as valid.
+  - `async: true` - `validate` returns `Promise<boolean>`; validation failures keep the original Ajv error structure (rejected `ValidationError` with `errors` items using keyword `"format"`).
+- Replacing an already registered format with the same name (including the built-in formats) requires explicit authorization via `override: true`.
+- Registration is atomic: all definitions are checked first and only then published - if any definition is invalid, nothing is registered.
+- The built-in formats added by this plugin are unchanged and keep working by default.
+
+Example registering three formats (sync function, sync RegExp, async function):
+
+```javascript
+const Ajv = require("ajv")
+const addFormats = require("ajv-formats")
+
+const ajv = new Ajv()
+addFormats(ajv) // optional: built-in formats keep working by default
+
+addFormats.registerFormats(ajv, [
+  // 1. sync function format for numbers
+  {name: "even", type: "number", async: false, validate: (n) => n % 2 === 0},
+  // 2. sync RegExp format for strings
+  {name: "lower", type: "string", async: false, validate: /^[a-z]+$/},
+  // 3. async format - failures keep the standard Ajv error structure
+  {name: "available", type: "string", async: true, validate: async (s) => s !== "taken"},
+])
+
+ajv.compile({format: "even"})(2) // true
+ajv.compile({format: "lower"})("abc") // true
+const validateAvailable = ajv.compile({$async: true, format: "available"})
+// await validateAvailable("taken") rejects with Ajv.ValidationError:
+// err.errors[0] => {keyword: "format", params: {format: "available"}, message: 'must match format "available"', ...}
+```
+
+Contract violations throw `FormatContractError` (available as `addFormats.FormatContractError`):
+
+```javascript
+// declared sync but returns a Promise -> explicit configuration error
+addFormats.registerFormats(ajv, {
+  name: "bad",
+  type: "string",
+  async: false,
+  validate: async () => true, // throws FormatContractError at registration time
+})
+
+// unknown type -> rejected
+addFormats.registerFormats(ajv, {name: "x", type: "boolean", async: false, validate: () => true})
+
+// same-name override requires explicit authorization
+addFormats.registerFormats(ajv, {
+  name: "date",
+  type: "string",
+  async: false,
+  validate: () => true,
+  override: true,
+})
+```
+
+To run the contract tests locally with Node:
+
+```bash
+npm install
+npm run build
+npx jest formatContract
+```
+
+Quick smoke check with a local Node command:
+
+```bash
+node -e "const Ajv=require('ajv');const addFormats=require('./dist');const ajv=new Ajv();addFormats.registerFormats(ajv,{name:'even',type:'number',async:false,validate:(n)=>n%2===0});console.log(ajv.compile({format:'even'})(2))"
+```
+
 ## Tests
 
 ```bash

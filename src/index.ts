@@ -12,11 +12,15 @@ import type {Plugin, Format} from "ajv"
 import {_, Name} from "ajv/dist/compile/codegen"
 
 export {FormatMode, FormatName} from "./formats"
-export {LimitFormatError} from "./limit"
+export {LimitFormatError, FormatLimitOptions} from "./limit"
 export interface FormatOptions {
   mode?: FormatMode
   formats?: FormatName[]
   keywords?: boolean
+  // pass-through option for formatMinimum/formatMaximum keywords:
+  // when true, invalid format values report a "format" error and
+  // the format "compare" function is not called for them
+  strictKeywords?: boolean
 }
 
 export type FormatsPluginOptions = FormatName[] | FormatOptions
@@ -40,7 +44,7 @@ const formatsPlugin: FormatsPlugin = (
     opts.mode === "fast" ? [fastFormats, fastName] : [fullFormats, fullName]
   const list = opts.formats || formatNames
   addFormats(ajv, list, formats, exportName)
-  if (opts.keywords) formatLimit(ajv)
+  if (opts.keywords) formatLimit(ajv, {strict: opts.strictKeywords})
   return ajv
 }
 

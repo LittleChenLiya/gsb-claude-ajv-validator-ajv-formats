@@ -82,6 +82,14 @@ const validDataList = ["2016-02-06", "2016-12-26"]
 const invalidDataList = ["2016-02-05", "2016-12-27", "abc"]
 ```
 
+By default, the comparison keywords invoke the format `compare` function regardless of whether the value passes format validation, so an invalid value (such as `"abc"`) may fail with a format error or a range error depending on how `compare` handles it. To enforce type-consistent validation, enable the strict mode with plugin option `strictKeywords: true` (or pass `{strict: true}` to the standalone `ajv-formats/dist/limit` plugin):
+
+```javascript
+require("ajv-formats")(ajv, {keywords: true, strictKeywords: true})
+```
+
+In strict mode the value is first checked with the format `validate` function: invalid strings report a `format` error (not a range error) and the format `compare` function is never called for them; valid strings are compared as usual. Non-string values keep the standard Ajv type semantics. The default (`false`) preserves the previous behavior.
+
 ## Options
 
 Options can be passed via the second parameter. Options value can be

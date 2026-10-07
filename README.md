@@ -112,6 +112,16 @@ addFormats(ajv, {mode: "fast", formats: ["date", "time"], keywords: true})
 
 In `"fast"` mode the following formats are simplified: `"date"`, `"time"`, `"date-time"`, `"iso-time"`, `"iso-date-time"`, `"uri"`, `"uri-reference"`, `"email"`. For example, `"date"`, `"time"` and `"date-time"` do not validate ranges in `"fast"` mode, only string structure, and other formats have simplified regular expressions.
 
+3. Option `undo: true` makes the plugin return an undo handle (`{ajv, undo}`) instead of the ajv instance. Calling `undo()` restores only the formats that this registration replaced - a format is reverted to the previous definition (or removed, if it was not defined before) only when it still holds the exact definition installed by this registration, so formats registered later by other callers are never deleted or overwritten. Calling `undo()` multiple times is safe, and it only affects the ajv instance the formats were registered on:
+
+```javascript
+const handle = addFormats(ajv, {mode: "fast", formats: ["date"], undo: true})
+// ... later, restore the previous "date" format definition:
+handle.undo()
+```
+
+Without the `undo` option the plugin keeps its default behavior and returns the ajv instance.
+
 ## Tests
 
 ```bash

@@ -112,6 +112,22 @@ addFormats(ajv, {mode: "fast", formats: ["date", "time"], keywords: true})
 
 In `"fast"` mode the following formats are simplified: `"date"`, `"time"`, `"date-time"`, `"iso-time"`, `"iso-date-time"`, `"uri"`, `"uri-reference"`, `"email"`. For example, `"date"`, `"time"` and `"date-time"` do not validate ranges in `"fast"` mode, only string structure, and other formats have simplified regular expressions.
 
+3. Undoable format registration with `undoable` option (instance-isolated):
+
+```javascript
+const undo = addFormats(ajv, {formats: ["date", "time"], undoable: true})
+// ... use the formats ...
+undo() // restore only what this registration replaced
+```
+
+When `undoable: true` is passed, `addFormats` returns an undo handle (a function) instead of the ajv instance. Calling the handle undoes only this registration on this ajv instance:
+
+- a format that existed before the registration is restored to its previous definition,
+- a format that did not exist before is removed,
+- a format that was (re-)registered later by another caller is left untouched, so a stale handle can never overwrite or remove newer registrations.
+
+The handle is idempotent - calling it more than once is safe. Handles are bound to their own ajv instance and never affect other instances. Validators that were already compiled keep the formats they captured; schemas compiled after registration/undo use the current definitions. Without the `undoable` option the behavior is unchanged - the ajv instance is returned.
+
 ## Tests
 
 ```bash

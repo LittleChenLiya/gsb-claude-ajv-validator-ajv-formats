@@ -7,16 +7,17 @@ import {
   fullFormats,
 } from "./formats"
 import formatLimit from "./limit"
+import type {FormatLimitOptions} from "./limit"
 import type Ajv from "ajv"
 import type {Plugin, Format} from "ajv"
 import {_, Name} from "ajv/dist/compile/codegen"
 
 export {FormatMode, FormatName} from "./formats"
-export {LimitFormatError} from "./limit"
+export {LimitFormatError, FormatLimitOptions} from "./limit"
 export interface FormatOptions {
   mode?: FormatMode
   formats?: FormatName[]
-  keywords?: boolean
+  keywords?: boolean | FormatLimitOptions
 }
 
 export type FormatsPluginOptions = FormatName[] | FormatOptions
@@ -40,7 +41,7 @@ const formatsPlugin: FormatsPlugin = (
     opts.mode === "fast" ? [fastFormats, fastName] : [fullFormats, fullName]
   const list = opts.formats || formatNames
   addFormats(ajv, list, formats, exportName)
-  if (opts.keywords) formatLimit(ajv)
+  if (opts.keywords) formatLimit(ajv, opts.keywords === true ? undefined : opts.keywords)
   return ajv
 }
 
